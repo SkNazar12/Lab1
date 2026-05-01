@@ -57,7 +57,7 @@ function readForm() {
     };
 }
 
-function validateo(dt) {
+function validate(dto) {
     clearAllErrors();
     let isValid = true;
 
