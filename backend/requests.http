@@ -1,0 +1,61 @@
+GET http://localhost:3000/api/events
+
+###
+GET http://localhost:3000/api/events/1
+
+###
+GET http://localhost:3000/api/events?search=семінар&sortBy=date&sortDir=desc&page=1&pageSize=10
+
+###
+POST http://localhost:3000/api/events
+Content-Type: application/json
+
+{
+  "title": "Нова подія",
+  "date": "2026-04-01",
+  "location": "Аудиторія 101",
+  "capacity": 15,
+  "desc": "Опис нової події"
+}
+
+###
+PUT http://localhost:3000/api/events/1
+Content-Type: application/json
+
+{
+  "title": "Оновлена подія",
+  "date": "2026-04-02",
+  "location": "Аудиторія 202",
+  "capacity": 25,
+  "desc": "Оновлений опис події"
+}
+
+###
+DELETE http://localhost:3000/api/events/1
+
+###
+GET http://localhost:3000/api/users
+
+###
+GET http://localhost:3000/api/users/1
+
+###
+POST http://localhost:3000/api/users
+Content-Type: application/json
+
+{
+  "name": "Іван",
+  "email": "ivan@example.com"
+}
+
+###
+PUT http://localhost:3000/api/users/1
+Content-Type: application/json
+
+{
+  "name": "Іван Оновлений",
+  "email": "ivan.updated@example.com"
+}
+
+###
+DELETE http://localhost:3000/api/users/1
