@@ -1,6 +1,5 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import * as repo from "../repositories/eventsRepo.js";
-import { demoAuth } from "../middlewares/demoAuth.js";
 
 const router = Router();
 
@@ -23,10 +22,9 @@ function validateEventBody(body: any): {
   const date = typeof body.date === "string" ? body.date.trim() : "";
   const location = typeof body.location === "string" ? body.location.trim() : "";
   const capacity = Number(body.capacity);
-  const descriptionSource = body.description ?? body.desc;
   const description =
-    typeof descriptionSource === "string" && descriptionSource.trim()
-      ? descriptionSource.trim()
+    typeof body.description === "string" && body.description.trim()
+      ? body.description.trim()
       : null;
 
   if (title.length < 3) {
@@ -48,17 +46,21 @@ function validateEventBody(body: any): {
   if (Object.keys(errors).length > 0) {
     const err = new Error("Validation error") as Error & {
       status?: number;
-      code?: string;
       errors?: Record<string, string[]>;
     };
 
     err.status = 400;
-    err.code = "VALIDATION_ERROR";
     err.errors = errors;
     throw err;
   }
 
-  return { title, date, location, capacity, description };
+  return {
+    title,
+    date,
+    location,
+    capacity,
+    description
+  };
 }
 
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
@@ -70,7 +72,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       limit: req.query.limit ? Number(req.query.limit) : undefined
     });
 
-    res.status(200).json({ data: events, meta: { count: events.length } });
+    res.status(200).json({ data: events });
   } catch (err) {
     next(err);
   }
@@ -85,30 +87,15 @@ router.get("/stats", async (_req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-router.get("/search", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const q = req.query.q?.toString() ?? "";
-    const events = await repo.unsafeSearch(q);
-
-    res.status(200).json({
-      data: events,
-      meta: {
-        count: events.length,
-        warning: "This endpoint intentionally uses SQL string concatenation for LabWork3 SQLi demonstration"
-      }
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseId(req.params.id);
 
     if (!id) {
       return res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "ID must be a positive integer" }
+        error: {
+          message: "ID must be a positive integer"
+        }
       });
     }
 
@@ -116,7 +103,9 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 
     if (!event) {
       return res.status(404).json({
-        error: { code: "EVENT_NOT_FOUND", message: "Event not found" }
+        error: {
+          message: "Event not found"
+        }
       });
     }
 
@@ -129,7 +118,15 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = validateEventBody(req.body);
-    const created = await repo.create(dto.title, dto.date, dto.location, dto.capacity, dto.description);
+
+    const created = await repo.create(
+      dto.title,
+      dto.date,
+      dto.location,
+      dto.capacity,
+      dto.description
+    );
+
     res.status(201).json({ data: created });
   } catch (err) {
     next(err);
@@ -142,16 +139,28 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
 
     if (!id) {
       return res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "ID must be a positive integer" }
+        error: {
+          message: "ID must be a positive integer"
+        }
       });
     }
 
     const dto = validateEventBody(req.body);
-    const updated = await repo.update(id, dto.title, dto.date, dto.location, dto.capacity, dto.description);
+
+    const updated = await repo.update(
+      id,
+      dto.title,
+      dto.date,
+      dto.location,
+      dto.capacity,
+      dto.description
+    );
 
     if (!updated) {
       return res.status(404).json({
-        error: { code: "EVENT_NOT_FOUND", message: "Event not found" }
+        error: {
+          message: "Event not found"
+        }
       });
     }
 
@@ -167,7 +176,9 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
 
     if (!id) {
       return res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "ID must be a positive integer" }
+        error: {
+          message: "ID must be a positive integer"
+        }
       });
     }
 
@@ -175,7 +186,9 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
 
     if (!deleted) {
       return res.status(404).json({
-        error: { code: "EVENT_NOT_FOUND", message: "Event not found" }
+        error: {
+          message: "Event not found"
+        }
       });
     }
 
@@ -185,20 +198,49 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-router.post("/:id/register", demoAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/:id/register", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const eventId = parseId(req.params.id);
+    const userId = Number(req.body.userId);
+
+    if (!eventId) {
+      return res.status(400).json({
+        error: {
+          message: "Event ID must be a positive integer"
+        }
+      });
+    }
+
+    if (!Number.isInteger(userId) || userId < 1) {
+      return res.status(400).json({
+        error: {
+          message: "userId must be a positive integer"
+        }
+      });
+    }
+
+    const registration = await repo.registerUser(eventId, userId);
+
+    res.status(201).json({ data: registration });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id/registrations", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const eventId = parseId(req.params.id);
 
     if (!eventId) {
       return res.status(400).json({
-        error: { code: "BAD_REQUEST", message: "Event ID must be a positive integer" }
+        error: {
+          message: "Event ID must be a positive integer"
+        }
       });
     }
 
-    const currentUserId = Number(res.locals.currentUserId);
-    const registration = await repo.registerCurrentUser(eventId, currentUserId);
-
-    res.status(201).json({ data: registration });
+    const registrations = await repo.getRegistrations(eventId);
+    res.status(200).json({ data: registrations });
   } catch (err) {
     next(err);
   }

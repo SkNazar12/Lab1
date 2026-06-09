@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { all, escapeSqlString, run } from "./dbClient.js";
+import { all, run } from "./dbClient.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,11 +21,7 @@ export async function migrate(): Promise<void> {
     );
   `);
 
-  const compiledMigrationsDir = path.join(__dirname, "migrations");
-  const sourceMigrationsDir = path.join(__dirname, "..", "..", "src", "db", "migrations");
-  const migrationsDir = fs.existsSync(compiledMigrationsDir)
-    ? compiledMigrationsDir
-    : sourceMigrationsDir;
+  const migrationsDir = path.join(__dirname, "migrations");
 
   if (!fs.existsSync(migrationsDir)) {
     throw new Error(`Migrations directory not found: ${migrationsDir}`);
@@ -51,12 +47,10 @@ export async function migrate(): Promise<void> {
     if (!sql) continue;
 
     await run(sql);
-
-    const now = new Date().toISOString();
-    await run(`
-      INSERT INTO schema_migrations (filename, appliedAt)
-      VALUES ('${escapeSqlString(file)}', '${escapeSqlString(now)}');
-    `);
+    await run(
+      "INSERT INTO schema_migrations (filename, appliedAt) VALUES (?, ?);",
+      [file, new Date().toISOString()]
+    );
 
     console.log(`Migration applied: ${file}`);
   }

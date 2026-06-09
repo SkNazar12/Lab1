@@ -1,13 +1,10 @@
-export type UserDto = {
-  id: number;
-  email: string;
-  name: string;
-  createdAt: string;
-};
+export interface CreateUserDto {
+    name: string;
+    email: string;
+}
 
-export type CreateUserDto = {
-  email: string;
-  name: string;
-};
-
-export type UpdateUserDto = CreateUserDto;
+export interface UserResponseDto {
+    id: string;
+    name: string;
+    email: string;
+}

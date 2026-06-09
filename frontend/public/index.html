@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Сервіс реєстрації на факультатив/подію</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="module" src="/js/main.js" defer></script>
+</head>
+<body>
+  <header class="header">
+    <h1>Сервіс реєстрації на факультатив/подію</h1>
+    <p>Створення подій, перегляд списку та реєстрація користувачів</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 id="formTitle">Додати подію</h2>
+
+      <div id="notice"></div>
+
+      <form id="eventForm">
+        <input type="hidden" id="editIdInput" value="" />
+
+        <div class="field">
+          <label for="titleInput">Назва події</label>
+          <input id="titleInput" type="text" placeholder="Напр., Основи веброзробки" />
+          <p class="error-text" id="titleError"></p>
+        </div>
+
+        <div class="field">
+          <label for="dateInput">Дата</label>
+          <input id="dateInput" type="date" />
+          <p class="error-text" id="dateError"></p>
+        </div>
+
+        <div class="field">
+          <label for="locationInput">Локація</label>
+          <input id="locationInput" type="text" placeholder="Напр., Аудиторія 305" />
+          <p class="error-text" id="locationError"></p>
+        </div>
+
+        <div class="field">
+          <label for="capacityInput">Кількість місць</label>
+          <input id="capacityInput" type="number" min="1" placeholder="Напр., 25" />
+          <p class="error-text" id="capacityError"></p>
+        </div>
+
+        <div class="field">
+          <label for="descriptionInput">Опис</label>
+          <textarea id="descriptionInput" rows="4" placeholder="Короткий опис факультативу або події"></textarea>
+          <p class="error-text" id="descriptionError"></p>
+        </div>
+
+        <div class="buttons">
+          <button type="submit" id="submitBtn">Додати</button>
+          <button type="button" id="resetBtn" class="secondary">Очистити</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Список подій</h2>
+
+      <div class="toolbar">
+        <input id="searchInput" type="text" placeholder="Пошук за назвою, локацією або описом..." />
+
+        <select id="sortSelect">
+          <option value="id_DESC">Новіші</option>
+          <option value="id_ASC">Старіші</option>
+          <option value="date_ASC">Найближча дата</option>
+          <option value="date_DESC">Найпізніша дата</option>
+          <option value="title_ASC">Назва A-Z</option>
+          <option value="title_DESC">Назва Z-A</option>
+        </select>
+
+        <button type="button" id="refreshBtn" class="secondary">Оновити</button>
+      </div>
+
+      <div id="listStatus"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Назва</th>
+            <th>Дата</th>
+            <th>Локація</th>
+            <th>Місця</th>
+            <th>Опис</th>
+            <th>Дії</th>
+          </tr>
+        </thead>
+        <tbody id="eventsTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

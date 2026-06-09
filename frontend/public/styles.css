@@ -1,0 +1,203 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  color: #222;
+}
+
+.header {
+  padding: 24px;
+  text-align: center;
+  background: #263238;
+  color: #fff;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+}
+
+.header p {
+  margin: 0;
+}
+
+.layout {
+  width: 100%;
+  max-width: 1400px;
+  margin: 24px auto;
+  padding: 0 16px;
+
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #d8dee4;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.form-card {
+  position: sticky;
+  top: 16px;
+}
+
+.table-card {
+  min-width: 0;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #b8c0cc;
+  border-radius: 6px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.buttons,
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar {
+  margin-bottom: 12px;
+}
+
+.toolbar input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.toolbar select {
+  min-width: 160px;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: #1565c0;
+  color: #fff;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button.secondary {
+  background: #607d8b;
+}
+
+button.danger {
+  background: #c62828;
+}
+
+.error-text {
+  min-height: 18px;
+  margin: 4px 0 0;
+  color: #c62828;
+  font-size: 14px;
+}
+
+.notice {
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 6px;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.notice.error {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.status {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.status.loading {
+  background: #e3f2fd;
+}
+
+.status.empty {
+  background: #fff8e1;
+}
+
+.status.error {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 850px;
+  margin-top: 14px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid #d8dee4;
+  padding: 10px;
+  vertical-align: top;
+}
+
+th {
+  background: #eef2f5;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-card {
+    position: static;
+  }
+}

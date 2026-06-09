@@ -1,5 +1,19 @@
-import type { EventDto, EventWithStatsDto } from "../dtos/event.dto.js";
-import { all, escapeSqlString, get, run, sqlString } from "../db/dbClient.js";
+import { all, get, run } from "../db/dbClient.js";
+
+export type EventDto = {
+  id: number;
+  title: string;
+  date: string;
+  location: string;
+  capacity: number;
+  description: string | null;
+  createdAt: string;
+};
+
+export type EventWithStatsDto = EventDto & {
+  registrationsCount: number;
+  freePlaces: number;
+};
 
 export type EventFilters = {
   q?: string;
@@ -14,25 +28,18 @@ function normalizeLimit(limit?: number): number {
   return Math.floor(limit);
 }
 
-function normalizeSort(sort?: string): string {
-  const allowedSortFields = new Set(["id", "title", "date", "location", "capacity", "createdAt"]);
-  return allowedSortFields.has(sort ?? "") ? String(sort) : "id";
-}
-
-function normalizeOrder(order?: string): "ASC" | "DESC" {
-  return order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
-}
-
 export async function getAll(filters: EventFilters = {}): Promise<EventWithStatsDto[]> {
   const where: string[] = [];
+  const params: Array<string | number | null> = [];
 
   if (filters.q) {
-    const q = escapeSqlString(filters.q);
-    where.push(`(e.title LIKE '%${q}%' OR e.location LIKE '%${q}%' OR e.description LIKE '%${q}%')`);
+    where.push("(e.title LIKE ? OR e.location LIKE ? OR e.description LIKE ?)");
+    params.push(`%${filters.q}%`, `%${filters.q}%`, `%${filters.q}%`);
   }
 
-  const sortField = normalizeSort(filters.sort);
-  const sortOrder = normalizeOrder(filters.order);
+  const allowedSortFields = new Set(["id", "title", "date", "location", "capacity", "createdAt"]);
+  const sortField = allowedSortFields.has(filters.sort ?? "") ? filters.sort : "id";
+  const sortOrder = filters.order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
   let sql = `
     SELECT
@@ -56,14 +63,17 @@ export async function getAll(filters: EventFilters = {}): Promise<EventWithStats
   sql += `
     GROUP BY e.id
     ORDER BY e.${sortField} ${sortOrder}
-    LIMIT ${normalizeLimit(filters.limit)};
+    LIMIT ?;
   `;
 
-  return await all<EventWithStatsDto>(sql);
+  params.push(normalizeLimit(filters.limit));
+
+  return await all<EventWithStatsDto>(sql, params);
 }
 
 export async function getById(id: number): Promise<EventWithStatsDto | undefined> {
-  return await get<EventWithStatsDto>(`
+  return await get<EventWithStatsDto>(
+    `
     SELECT
       e.id,
       e.title,
@@ -76,9 +86,11 @@ export async function getById(id: number): Promise<EventWithStatsDto | undefined
       e.capacity - COUNT(r.id) AS freePlaces
     FROM Events e
     LEFT JOIN Registrations r ON r.eventId = e.id
-    WHERE e.id = ${id}
+    WHERE e.id = ?
     GROUP BY e.id;
-  `);
+    `,
+    [id]
+  );
 }
 
 export async function create(
@@ -90,23 +102,22 @@ export async function create(
 ): Promise<EventDto> {
   const now = new Date().toISOString();
 
-  const result = await run(`
+  const result = await run(
+    `
     INSERT INTO Events (title, date, location, capacity, description, createdAt)
-    VALUES (
-      '${escapeSqlString(title)}',
-      '${escapeSqlString(date)}',
-      '${escapeSqlString(location)}',
-      ${capacity},
-      ${sqlString(description)},
-      '${escapeSqlString(now)}'
-    );
-  `);
+    VALUES (?, ?, ?, ?, ?, ?);
+    `,
+    [title, date, location, capacity, description, now]
+  );
 
-  const created = await get<EventDto>(`
+  const created = await get<EventDto>(
+    `
     SELECT id, title, date, location, capacity, description, createdAt
     FROM Events
-    WHERE id = ${result.lastID};
-  `);
+    WHERE id = ?;
+    `,
+    [result.lastID]
+  );
 
   if (!created) {
     throw new Error("Event was created but cannot be loaded");
@@ -123,32 +134,33 @@ export async function update(
   capacity: number,
   description: string | null
 ): Promise<EventDto | undefined> {
-  const result = await run(`
+  const result = await run(
+    `
     UPDATE Events
-    SET
-      title = '${escapeSqlString(title)}',
-      date = '${escapeSqlString(date)}',
-      location = '${escapeSqlString(location)}',
-      capacity = ${capacity},
-      description = ${sqlString(description)}
-    WHERE id = ${id};
-  `);
+    SET title = ?, date = ?, location = ?, capacity = ?, description = ?
+    WHERE id = ?;
+    `,
+    [title, date, location, capacity, description, id]
+  );
 
   if (result.changes === 0) return undefined;
 
-  return await get<EventDto>(`
+  return await get<EventDto>(
+    `
     SELECT id, title, date, location, capacity, description, createdAt
     FROM Events
-    WHERE id = ${id};
-  `);
+    WHERE id = ?;
+    `,
+    [id]
+  );
 }
 
 export async function remove(id: number): Promise<boolean> {
-  const result = await run(`DELETE FROM Events WHERE id = ${id};`);
+  const result = await run("DELETE FROM Events WHERE id = ?;", [id]);
   return result.changes > 0;
 }
 
-export async function registerCurrentUser(eventId: number, currentUserId: number): Promise<{
+export async function registerUser(eventId: number, userId: number): Promise<{
   id: number;
   eventId: number;
   userId: number;
@@ -157,32 +169,61 @@ export async function registerCurrentUser(eventId: number, currentUserId: number
   const event = await getById(eventId);
 
   if (!event) {
-    const err = new Error("Event not found") as Error & { status?: number; code?: string };
+    const err = new Error("Event not found") as Error & { status?: number };
     err.status = 404;
-    err.code = "EVENT_NOT_FOUND";
     throw err;
   }
 
   if (event.freePlaces <= 0) {
-    const err = new Error("No free places for this event") as Error & { status?: number; code?: string };
+    const err = new Error("No free places for this event") as Error & { status?: number };
     err.status = 409;
-    err.code = "NO_FREE_PLACES";
     throw err;
   }
 
   const registeredAt = new Date().toISOString();
 
-  const result = await run(`
+  const result = await run(
+    `
     INSERT INTO Registrations (eventId, userId, registeredAt)
-    VALUES (${eventId}, ${currentUserId}, '${escapeSqlString(registeredAt)}');
-  `);
+    VALUES (?, ?, ?);
+    `,
+    [eventId, userId, registeredAt]
+  );
 
   return {
     id: result.lastID,
     eventId,
-    userId: currentUserId,
+    userId,
     registeredAt
   };
+}
+
+export async function getRegistrations(eventId: number): Promise<
+  Array<{
+    id: number;
+    eventId: number;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    registeredAt: string;
+  }>
+> {
+  return await all(
+    `
+    SELECT
+      r.id,
+      r.eventId,
+      r.userId,
+      u.name AS userName,
+      u.email AS userEmail,
+      r.registeredAt
+    FROM Registrations r
+    JOIN Users u ON u.id = r.userId
+    WHERE r.eventId = ?
+    ORDER BY r.id DESC;
+    `,
+    [eventId]
+  );
 }
 
 export async function getStats(): Promise<{
@@ -196,13 +237,17 @@ export async function getStats(): Promise<{
     totalCapacity: number;
     totalRegistrations: number;
     averageCapacity: number;
-  }>(`
+  }>(
+    `
     SELECT
-      (SELECT COUNT(*) FROM Events) AS totalEvents,
-      (SELECT COALESCE(SUM(capacity), 0) FROM Events) AS totalCapacity,
-      (SELECT COUNT(*) FROM Registrations) AS totalRegistrations,
-      (SELECT COALESCE(AVG(capacity), 0) FROM Events) AS averageCapacity;
-  `);
+      COUNT(DISTINCT e.id) AS totalEvents,
+      COALESCE(SUM(DISTINCT e.capacity), 0) AS totalCapacity,
+      COUNT(r.id) AS totalRegistrations,
+      COALESCE(AVG(DISTINCT e.capacity), 0) AS averageCapacity
+    FROM Events e
+    LEFT JOIN Registrations r ON r.eventId = e.id;
+    `
+  );
 
   return {
     totalEvents: row?.totalEvents ?? 0,
@@ -210,20 +255,4 @@ export async function getStats(): Promise<{
     totalRegistrations: row?.totalRegistrations ?? 0,
     averageCapacity: row?.averageCapacity ?? 0
   };
-}
-
-export async function unsafeSearch(q: string): Promise<EventDto[]> {
-  // Навчальна демонстрація для ЛР3: користувацький ввід навмисно вставляється
-  // у SQL через конкатенацію. У фінальній роботі це треба замінити параметрами.
-  const sql = `
-    SELECT id, title, date, location, capacity, description, createdAt
-    FROM Events
-    WHERE title LIKE '%${q}%'
-       OR location LIKE '%${q}%'
-       OR description LIKE '%${q}%'
-    ORDER BY date DESC
-    LIMIT 20;
-  `;
-
-  return await all<EventDto>(sql);
 }

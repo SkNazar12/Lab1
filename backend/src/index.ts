@@ -11,8 +11,7 @@ async function bootstrap() {
   app.listen(PORT, () => {
     console.log(`Backend started: http://localhost:${PORT}`);
     console.log(`Healthcheck: http://localhost:${PORT}/health`);
-    console.log(`Events API: http://localhost:${PORT}/api/v1/events`);
-    console.log(`Registrations API: http://localhost:${PORT}/api/v1/registrations`);
+    console.log(`Tickets API: http://localhost:${PORT}/api/v1/tickets`);
   });
 }
 
