@@ -88,8 +88,17 @@ export function registerUser(eventId, userId) {
   return request(`/events/${eventId}/register`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ userId })
+      "Content-Type": "application/json",
+      "X-Demo-UserId": String(userId)
+    }
+  });
+}
+
+export function getMyRegistrations(userId) {
+  return request("/registrations/me", {
+    method: "GET",
+    headers: {
+      "X-Demo-UserId": String(userId)
+    }
   });
 }

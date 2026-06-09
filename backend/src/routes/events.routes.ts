@@ -1,5 +1,6 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import * as repo from "../repositories/eventsRepo.js";
+import { demoAuth } from "../middlewares/demoAuth.js";
 
 const router = Router();
 
@@ -46,10 +47,12 @@ function validateEventBody(body: any): {
   if (Object.keys(errors).length > 0) {
     const err = new Error("Validation error") as Error & {
       status?: number;
+      code?: string;
       errors?: Record<string, string[]>;
     };
 
     err.status = 400;
+    err.code = "VALIDATION_ERROR";
     err.errors = errors;
     throw err;
   }
@@ -94,6 +97,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     if (!id) {
       return res.status(400).json({
         error: {
+          code: "BAD_REQUEST",
           message: "ID must be a positive integer"
         }
       });
@@ -104,6 +108,7 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     if (!event) {
       return res.status(404).json({
         error: {
+          code: "EVENT_NOT_FOUND",
           message: "Event not found"
         }
       });
@@ -140,6 +145,7 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
     if (!id) {
       return res.status(400).json({
         error: {
+          code: "BAD_REQUEST",
           message: "ID must be a positive integer"
         }
       });
@@ -159,6 +165,7 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
     if (!updated) {
       return res.status(404).json({
         error: {
+          code: "EVENT_NOT_FOUND",
           message: "Event not found"
         }
       });
@@ -177,6 +184,7 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
     if (!id) {
       return res.status(400).json({
         error: {
+          code: "BAD_REQUEST",
           message: "ID must be a positive integer"
         }
       });
@@ -187,6 +195,7 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
     if (!deleted) {
       return res.status(404).json({
         error: {
+          code: "EVENT_NOT_FOUND",
           message: "Event not found"
         }
       });
@@ -198,49 +207,23 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-router.post("/:id/register", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/:id/register", demoAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const eventId = parseId(req.params.id);
-    const userId = Number(req.body.userId);
 
     if (!eventId) {
       return res.status(400).json({
         error: {
+          code: "BAD_REQUEST",
           message: "Event ID must be a positive integer"
         }
       });
     }
 
-    if (!Number.isInteger(userId) || userId < 1) {
-      return res.status(400).json({
-        error: {
-          message: "userId must be a positive integer"
-        }
-      });
-    }
-
-    const registration = await repo.registerUser(eventId, userId);
+    const currentUserId = Number(res.locals.currentUserId);
+    const registration = await repo.registerCurrentUser(eventId, currentUserId);
 
     res.status(201).json({ data: registration });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get("/:id/registrations", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const eventId = parseId(req.params.id);
-
-    if (!eventId) {
-      return res.status(400).json({
-        error: {
-          message: "Event ID must be a positive integer"
-        }
-      });
-    }
-
-    const registrations = await repo.getRegistrations(eventId);
-    res.status(200).json({ data: registrations });
   } catch (err) {
     next(err);
   }

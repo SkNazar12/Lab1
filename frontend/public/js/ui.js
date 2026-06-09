@@ -1,10 +1,21 @@
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function createCell(text) {
+  const td = document.createElement("td");
+  td.textContent = text ?? "";
+  return td;
+}
+
+function createButton(text, action, id, className = "") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = text;
+  button.dataset.action = action;
+  button.dataset.id = String(id);
+
+  if (className) {
+    button.className = className;
+  }
+
+  return button;
 }
 
 export function showNotice(message, type = "success") {
@@ -52,27 +63,32 @@ export function renderEvents(events) {
   const tbody = document.getElementById("eventsTableBody");
   if (!tbody) return;
 
-  tbody.innerHTML = events
-    .map((event) => {
-      const placesText = `${event.registrationsCount ?? 0}/${event.capacity}`;
+  tbody.replaceChildren();
 
-      return `
-        <tr>
-          <td>${escapeHtml(event.id)}</td>
-          <td>${escapeHtml(event.title)}</td>
-          <td>${escapeHtml(event.date)}</td>
-          <td>${escapeHtml(event.location)}</td>
-          <td>${escapeHtml(placesText)}</td>
-          <td>${escapeHtml(event.description || "—")}</td>
-          <td class="actions">
-            <button type="button" data-action="register" data-id="${escapeHtml(event.id)}">Зареєструвати</button>
-            <button type="button" data-action="edit" data-id="${escapeHtml(event.id)}">Редагувати</button>
-            <button type="button" data-action="delete" data-id="${escapeHtml(event.id)}" class="danger">Видалити</button>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
+  for (const event of events) {
+    const tr = document.createElement("tr");
+
+    tr.append(
+      createCell(String(event.id)),
+      createCell(event.title),
+      createCell(event.date),
+      createCell(event.location),
+      createCell(`${event.registrationsCount ?? 0}/${event.capacity}`),
+      createCell(event.description || "—")
+    );
+
+    const actionsTd = document.createElement("td");
+    actionsTd.className = "actions";
+
+    actionsTd.append(
+      createButton("Зареєструвати", "register", event.id),
+      createButton("Редагувати", "edit", event.id),
+      createButton("Видалити", "delete", event.id, "danger")
+    );
+
+    tr.append(actionsTd);
+    tbody.appendChild(tr);
+  }
 }
 
 export function clearErrors() {

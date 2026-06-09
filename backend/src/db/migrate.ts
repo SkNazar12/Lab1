@@ -10,6 +10,13 @@ type MigrationRow = {
   filename: string;
 };
 
+function splitSqlStatements(sql: string): string[] {
+  return sql
+    .split(";")
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+}
+
 export async function migrate(): Promise<void> {
   await run("PRAGMA foreign_keys = ON;");
 
@@ -42,17 +49,27 @@ export async function migrate(): Promise<void> {
     if (applied.has(file)) continue;
 
     const fullPath = path.join(migrationsDir, file);
-    const sql = fs.readFileSync(fullPath, "utf8").trim();
+    const rawSql = fs.readFileSync(fullPath, "utf8");
+    const statements = splitSqlStatements(rawSql);
 
-    if (!sql) continue;
+    await run("BEGIN TRANSACTION;");
 
-    await run(sql);
-    await run(
-      "INSERT INTO schema_migrations (filename, appliedAt) VALUES (?, ?);",
-      [file, new Date().toISOString()]
-    );
+    try {
+      for (const statement of statements) {
+        await run(statement);
+      }
 
-    console.log(`Migration applied: ${file}`);
+      await run(
+        "INSERT INTO schema_migrations (filename, appliedAt) VALUES (?, ?);",
+        [file, new Date().toISOString()]
+      );
+
+      await run("COMMIT;");
+      console.log(`Migration applied: ${file}`);
+    } catch (err) {
+      await run("ROLLBACK;");
+      throw err;
+    }
   }
 
   console.log("DB schema initialized");

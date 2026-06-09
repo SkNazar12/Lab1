@@ -13,8 +13,8 @@
     <p>Створення подій, перегляд списку та реєстрація користувачів</p>
   </header>
 
-  <main class="container">
-    <section class="card">
+  <main class="layout">
+    <section class="card form-card">
       <h2 id="formTitle">Додати подію</h2>
 
       <div id="notice"></div>
@@ -59,11 +59,11 @@
       </form>
     </section>
 
-    <section class="card">
+    <section class="card table-card">
       <h2>Список подій</h2>
 
       <div class="toolbar">
-        <input id="searchInput" type="text" placeholder="Пошук за назвою, локацією або описом..." />
+        <input id="searchInput" type="text" placeholder="Пошук..." />
 
         <select id="sortSelect">
           <option value="id_DESC">Новіші</option>
@@ -79,20 +79,22 @@
 
       <div id="listStatus"></div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Назва</th>
-            <th>Дата</th>
-            <th>Локація</th>
-            <th>Місця</th>
-            <th>Опис</th>
-            <th>Дії</th>
-          </tr>
-        </thead>
-        <tbody id="eventsTableBody"></tbody>
-      </table>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Назва</th>
+              <th>Дата</th>
+              <th>Локація</th>
+              <th>Місця</th>
+              <th>Опис</th>
+              <th>Дії</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 </body>

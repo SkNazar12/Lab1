@@ -142,7 +142,11 @@ async function handleTableClick(event) {
   }
 
   if (action === "register") {
-    const userIdText = prompt("Введіть ID користувача для реєстрації:", "1");
+    const userIdText = prompt(
+      "Введіть ID користувача для X-Demo-UserId. Наприклад: 1 або 2",
+      "1"
+    );
+
     if (!userIdText) return;
 
     const userId = Number(userIdText);
@@ -170,35 +174,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("searchInput");
   const sortSelect = document.getElementById("sortSelect");
 
-  if (!eventForm) {
-    console.error("Не знайдено форму з id='eventForm'. Перевір frontend/public/index.html");
-    return;
-  }
-
-  if (!eventsTableBody) {
-    console.error("Не знайдено tbody з id='eventsTableBody'. Перевір frontend/public/index.html");
+  if (!eventForm || !eventsTableBody) {
+    console.error("HTML не співпадає з JS. Перевір id='eventForm' і id='eventsTableBody'.");
     return;
   }
 
   eventForm.addEventListener("submit", handleSubmit);
 
-  if (resetBtn) {
-    resetBtn.addEventListener("click", resetForm);
-  }
-
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", loadEvents);
-  }
+  if (resetBtn) resetBtn.addEventListener("click", resetForm);
+  if (refreshBtn) refreshBtn.addEventListener("click", loadEvents);
 
   eventsTableBody.addEventListener("click", handleTableClick);
 
-  if (searchInput) {
-    searchInput.addEventListener("input", loadEvents);
-  }
-
-  if (sortSelect) {
-    sortSelect.addEventListener("change", loadEvents);
-  }
+  if (searchInput) searchInput.addEventListener("input", loadEvents);
+  if (sortSelect) sortSelect.addEventListener("change", loadEvents);
 
   loadEvents();
 });

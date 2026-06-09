@@ -1,0 +1,74 @@
+### HEALTH
+GET http://localhost:3000/health
+
+
+### A. SQLi — нормальний пошук
+GET http://localhost:3000/api/v1/events?q=web&sort=title&order=ASC
+
+
+### A. SQLi — проблемний ввід тепер сприймається як текст
+GET http://localhost:3000/api/v1/events?q=' OR 1=1 --&sort=title&order=ASC
+
+
+### A. SQLi — небезпечний sort не проходить, backend використовує allowlist
+GET http://localhost:3000/api/v1/events?q=test&sort=id;DROP TABLE Users;&order=DESC
+
+
+### Б. XSS — створити подію з HTML у назві/описі
+POST http://localhost:3000/api/v1/events
+Content-Type: application/json
+
+{
+  "title": "<b>XSS test</b>",
+  "date": "2026-07-01",
+  "location": "Аудиторія 101",
+  "capacity": 10,
+  "description": "<img src=x onerror=alert(1)>"
+}
+
+
+### Б. XSS — перевірити, що frontend покаже це як текст
+GET http://localhost:3000/api/v1/events
+
+
+### В. IDOR — немає X-Demo-UserId, має бути 401
+GET http://localhost:3000/api/v1/registrations/me
+
+
+### В. IDOR — користувач 1 бачить тільки свої реєстрації
+GET http://localhost:3000/api/v1/registrations/me
+X-Demo-UserId: 1
+
+
+### В. IDOR — користувач 2 бачить тільки свої реєстрації
+GET http://localhost:3000/api/v1/registrations/me
+X-Demo-UserId: 2
+
+
+### В. IDOR — користувач 1 пробує прочитати чужу реєстрацію id=2, має бути 403
+GET http://localhost:3000/api/v1/registrations/2
+X-Demo-UserId: 1
+
+
+### В. IDOR — власник читає свою реєстрацію id=2, має бути 200
+GET http://localhost:3000/api/v1/registrations/2
+X-Demo-UserId: 2
+
+
+### В. IDOR — користувач 1 пробує змінити чужу реєстрацію id=2, має бути 403
+PUT http://localhost:3000/api/v1/registrations/2
+Content-Type: application/json
+X-Demo-UserId: 1
+
+{
+  "eventId": 1
+}
+
+
+### В. IDOR — користувач 1 пробує видалити чужу реєстрацію id=2, має бути 403
+DELETE http://localhost:3000/api/v1/registrations/2
+X-Demo-UserId: 1
+
+
+### Г. Misconfiguration — перевірити security headers
+GET http://localhost:3000/health

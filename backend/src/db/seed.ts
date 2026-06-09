@@ -25,6 +25,11 @@ export async function seedIfEmpty(): Promise<void> {
   );
 
   await run(
+    "INSERT INTO Users (id, email, name, createdAt) VALUES (?, ?, ?, ?);",
+    [3, "student3@knu.ua", "Ivan", now]
+  );
+
+  await run(
     `
     INSERT INTO Events (id, title, date, location, capacity, description, createdAt)
     VALUES (?, ?, ?, ?, ?, ?, ?);
@@ -58,10 +63,18 @@ export async function seedIfEmpty(): Promise<void> {
 
   await run(
     `
-    INSERT INTO Registrations (eventId, userId, registeredAt)
-    VALUES (?, ?, ?);
+    INSERT INTO Registrations (id, eventId, userId, registeredAt)
+    VALUES (?, ?, ?, ?);
     `,
-    [1, 1, now]
+    [1, 1, 1, now]
+  );
+
+  await run(
+    `
+    INSERT INTO Registrations (id, eventId, userId, registeredAt)
+    VALUES (?, ?, ?, ?);
+    `,
+    [2, 2, 2, now]
   );
 
   console.log("Seed data inserted");

@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 type AppError = Error & {
   status?: number;
+  code?: string;
   errors?: Record<string, string[]>;
 };
 
@@ -11,48 +12,55 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ) {
-  const message = err.message || "Internal Server Error";
+  const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 500;
 
-  if (err.status) {
-    return res.status(err.status).json({
-      error: {
-        message,
-        errors: err.errors ?? null
-      }
-    });
+  if (process.env.NODE_ENV !== "production") {
+    console.error("[ERROR]", err);
   }
 
-  if (message.includes("FOREIGN KEY constraint failed")) {
-    return res.status(400).json({
-      error: {
-        message: "Related record does not exist. Check userId or ticketId."
-      }
-    });
-  }
-
-  if (message.includes("UNIQUE constraint failed")) {
+  if (err.message?.includes("UNIQUE constraint failed")) {
     return res.status(409).json({
       error: {
+        code: "CONFLICT",
         message: "Conflict: record already exists"
       }
     });
   }
 
-  if (
-    message.includes("NOT NULL constraint failed") ||
-    message.includes("CHECK constraint failed")
-  ) {
+  if (err.message?.includes("FOREIGN KEY constraint failed")) {
     return res.status(400).json({
       error: {
-        message
+        code: "BAD_REQUEST",
+        message: "Related record does not exist"
       }
     });
   }
 
-  console.error("[SERVER ERROR]", err);
+  if (
+    err.message?.includes("CHECK constraint failed") ||
+    err.message?.includes("NOT NULL constraint failed")
+  ) {
+    return res.status(400).json({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Invalid data"
+      }
+    });
+  }
+
+  if (status !== 500) {
+    return res.status(status).json({
+      error: {
+        code: err.code ?? "REQUEST_ERROR",
+        message: err.message,
+        errors: err.errors ?? undefined
+      }
+    });
+  }
 
   return res.status(500).json({
     error: {
+      code: "INTERNAL_SERVER_ERROR",
       message: "Internal Server Error"
     }
   });

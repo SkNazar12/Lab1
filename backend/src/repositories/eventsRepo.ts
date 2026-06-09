@@ -28,6 +28,15 @@ function normalizeLimit(limit?: number): number {
   return Math.floor(limit);
 }
 
+function normalizeSort(sort?: string): string {
+  const allowedSortFields = new Set(["id", "title", "date", "location", "capacity", "createdAt"]);
+  return allowedSortFields.has(sort ?? "") ? String(sort) : "id";
+}
+
+function normalizeOrder(order?: string): "ASC" | "DESC" {
+  return order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
+}
+
 export async function getAll(filters: EventFilters = {}): Promise<EventWithStatsDto[]> {
   const where: string[] = [];
   const params: Array<string | number | null> = [];
@@ -37,9 +46,8 @@ export async function getAll(filters: EventFilters = {}): Promise<EventWithStats
     params.push(`%${filters.q}%`, `%${filters.q}%`, `%${filters.q}%`);
   }
 
-  const allowedSortFields = new Set(["id", "title", "date", "location", "capacity", "createdAt"]);
-  const sortField = allowedSortFields.has(filters.sort ?? "") ? filters.sort : "id";
-  const sortOrder = filters.order?.toUpperCase() === "ASC" ? "ASC" : "DESC";
+  const sortField = normalizeSort(filters.sort);
+  const sortOrder = normalizeOrder(filters.order);
 
   let sql = `
     SELECT
@@ -160,7 +168,7 @@ export async function remove(id: number): Promise<boolean> {
   return result.changes > 0;
 }
 
-export async function registerUser(eventId: number, userId: number): Promise<{
+export async function registerCurrentUser(eventId: number, currentUserId: number): Promise<{
   id: number;
   eventId: number;
   userId: number;
@@ -169,14 +177,19 @@ export async function registerUser(eventId: number, userId: number): Promise<{
   const event = await getById(eventId);
 
   if (!event) {
-    const err = new Error("Event not found") as Error & { status?: number };
+    const err = new Error("Event not found") as Error & { status?: number; code?: string };
     err.status = 404;
+    err.code = "EVENT_NOT_FOUND";
     throw err;
   }
 
   if (event.freePlaces <= 0) {
-    const err = new Error("No free places for this event") as Error & { status?: number };
+    const err = new Error("No free places for this event") as Error & {
+      status?: number;
+      code?: string;
+    };
     err.status = 409;
+    err.code = "NO_FREE_PLACES";
     throw err;
   }
 
@@ -187,43 +200,15 @@ export async function registerUser(eventId: number, userId: number): Promise<{
     INSERT INTO Registrations (eventId, userId, registeredAt)
     VALUES (?, ?, ?);
     `,
-    [eventId, userId, registeredAt]
+    [eventId, currentUserId, registeredAt]
   );
 
   return {
     id: result.lastID,
     eventId,
-    userId,
+    userId: currentUserId,
     registeredAt
   };
-}
-
-export async function getRegistrations(eventId: number): Promise<
-  Array<{
-    id: number;
-    eventId: number;
-    userId: number;
-    userName: string;
-    userEmail: string;
-    registeredAt: string;
-  }>
-> {
-  return await all(
-    `
-    SELECT
-      r.id,
-      r.eventId,
-      r.userId,
-      u.name AS userName,
-      u.email AS userEmail,
-      r.registeredAt
-    FROM Registrations r
-    JOIN Users u ON u.id = r.userId
-    WHERE r.eventId = ?
-    ORDER BY r.id DESC;
-    `,
-    [eventId]
-  );
 }
 
 export async function getStats(): Promise<{
@@ -240,12 +225,10 @@ export async function getStats(): Promise<{
   }>(
     `
     SELECT
-      COUNT(DISTINCT e.id) AS totalEvents,
-      COALESCE(SUM(DISTINCT e.capacity), 0) AS totalCapacity,
-      COUNT(r.id) AS totalRegistrations,
-      COALESCE(AVG(DISTINCT e.capacity), 0) AS averageCapacity
-    FROM Events e
-    LEFT JOIN Registrations r ON r.eventId = e.id;
+      (SELECT COUNT(*) FROM Events) AS totalEvents,
+      (SELECT COALESCE(SUM(capacity), 0) FROM Events) AS totalCapacity,
+      (SELECT COUNT(*) FROM Registrations) AS totalRegistrations,
+      (SELECT COALESCE(AVG(capacity), 0) FROM Events) AS averageCapacity;
     `
   );
 
