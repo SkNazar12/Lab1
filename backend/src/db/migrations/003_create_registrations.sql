@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS Registrations (
+  id INTEGER PRIMARY KEY,
+  eventId INTEGER NOT NULL,
+  userId INTEGER NOT NULL,
+  registeredAt TEXT NOT NULL,
+  FOREIGN KEY (eventId) REFERENCES Events(id) ON DELETE CASCADE,
+  FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE,
+  UNIQUE(eventId, userId)
+);
